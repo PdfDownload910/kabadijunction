@@ -1,0 +1,100 @@
+import { ScrapMaterial } from "@/types";
+import scrapMetal from "@/assets/scrap-metal.jpg";
+import scrapPlastic from "@/assets/scrap-plastic.jpg";
+import scrapCardboard from "@/assets/scrap-cardboard.jpg";
+import scrapEwaste from "@/assets/scrap-ewaste.jpg";
+
+export const scrapMaterials: ScrapMaterial[] = [
+  {
+    id: "cardboard",
+    name: "Cardboard",
+    category: "cardboard",
+    price: 12,
+    unit: "kg",
+    image: scrapCardboard,
+    description: "Used cartons, boxes, paperboard, and other cardboard scrap.",
+    minQuantity: 5,
+  },
+  {
+    id: "metal",
+    name: "Metal",
+    category: "metal",
+    price: 25,
+    unit: "kg",
+    image: scrapMetal,
+    description: "Aluminum, steel, iron, and other metal scrap materials.",
+    minQuantity: 1,
+  },
+  {
+    id: "copper",
+    name: "Copper",
+    category: "copper",
+    price: 150,
+    unit: "kg",
+    image: scrapMetal,
+    description: "Copper wires, pipes, and other copper materials.",
+    minQuantity: 1,
+  },
+  {
+    id: "plastic",
+    name: "Plastic",
+    category: "plastic",
+    price: 8,
+    unit: "kg",
+    image: scrapPlastic,
+    description: "PET bottles, containers, packaging, and other plastic scrap.",
+    minQuantity: 5,
+  },
+  {
+    id: "tyre",
+    name: "Tyre",
+    category: "tyre",
+    price: 20,
+    unit: "kg",
+    image: scrapMetal,
+    description: "Used rubber tyres and automotive rubber materials.",
+    minQuantity: 1,
+  },
+  {
+    id: "brass",
+    name: "Brass",
+    category: "brass",
+    price: 130,
+    unit: "kg",
+    image: scrapMetal,
+    description: "Brass fittings, pipes, and other brass materials.",
+    minQuantity: 1,
+  },
+  {
+    id: "aluminium",
+    name: "Aluminium",
+    category: "aluminium",
+    price: 90,
+    unit: "kg",
+    image: scrapMetal,
+    description: "Aluminium cans, sheets, and other aluminium scrap.",
+    minQuantity: 1,
+  },
+  {
+    id: "ewaste",
+    name: "E-Waste",
+    category: "ewaste",
+    price: 15,
+    unit: "kg",
+    image: scrapEwaste,
+    description: "Old electronics, gadgets, batteries, circuit boards, and other e-waste.",
+    minQuantity: 1,
+  },
+];
+
+export const scrapCategories = [
+  { id: "all", name: "All Categories" },
+  { id: "metal", name: "Metal" },
+  { id: "plastic", name: "Plastic" },
+  { id: "cardboard", name: "Cardboard" },
+  { id: "copper", name: "Copper" },
+  { id: "brass", name: "Brass" },
+  { id: "aluminium", name: "Aluminium" },
+  { id: "tyre", name: "Tyre" },
+  { id: "ewaste", name: "E-Waste" },
+];
