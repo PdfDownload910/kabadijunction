@@ -4,31 +4,105 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Order } from "@/types";
-import { scrapMaterials } from "@/data/scrapMaterials";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [scrapMaterials, setScrapMaterials] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const loggedInUser = JSON.parse(localStorage.getItem("kabadiJunctionUser") || "null");
-    if (!loggedInUser) {
-      navigate("/login");
-      return;
-    }
-    setUser(loggedInUser);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (!session?.user) {
+          navigate("/login");
+        } else {
+          fetchUserData(session.user.id);
+        }
+      }
+    );
 
-    // Load orders
-    const allOrders = JSON.parse(localStorage.getItem("kabadiJunctionOrders") || "[]");
-    setOrders(allOrders.reverse()); // Show latest first
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (!session?.user) {
+        navigate("/login");
+      } else {
+        fetchUserData(session.user.id);
+      }
+    });
+
+    // Fetch scrap materials
+    fetchScrapMaterials();
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("kabadiJunctionUser");
+  const fetchUserData = async (userId: string) => {
+    try {
+      // Fetch user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error fetching profile:', profileError);
+      } else {
+        setProfile(profileData);
+      }
+
+      // Fetch user orders with order items
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            scrap_materials (*)
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
+      } else {
+        setOrders(ordersData || []);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchScrapMaterials = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('scrap_materials')
+        .select('*');
+      
+      if (error) throw error;
+      setScrapMaterials(data || []);
+    } catch (error) {
+      console.error('Error fetching scrap materials:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
@@ -51,6 +125,16 @@ const Profile = () => {
     const material = scrapMaterials.find(m => m.id === materialId);
     return material ? material.name : materialId;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-secondary flex items-center justify-center">
+        <div className="text-center">
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return null; // Will redirect to login
@@ -78,7 +162,9 @@ const Profile = () => {
             <CardContent>
               <div className="space-y-2">
                 <p><strong>Email:</strong> {user.email}</p>
-                <p><strong>Member since:</strong> {new Date(user.createdAt).toLocaleDateString()}</p>
+                {profile?.full_name && <p><strong>Name:</strong> {profile.full_name}</p>}
+                {profile?.phone && <p><strong>Phone:</strong> {profile.phone}</p>}
+                <p><strong>Member since:</strong> {new Date(user.created_at).toLocaleDateString()}</p>
               </div>
             </CardContent>
           </Card>
@@ -104,13 +190,13 @@ const Profile = () => {
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
                           <div className="space-y-2">
                             <div className="flex items-center space-x-2">
-                              <span className="font-semibold">Order #{order.id}</span>
+                              <span className="font-semibold">Order #{order.id.slice(0, 8)}</span>
                               <Badge className={getStatusColor(order.status)}>
                                 {order.status.toUpperCase()}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              Pickup Date: {order.pickupDate} at {order.pickupTime}
+                              Pickup Date: {order.pickup_date} at {order.pickup_time}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               Address: {order.address}, {order.landmark}
@@ -118,23 +204,23 @@ const Profile = () => {
                             <div className="text-sm">
                               <strong>Materials:</strong>
                               <ul className="ml-4 mt-1">
-                                {order.scrapMaterials.map((item, index) => (
+                                {order.order_items?.map((item: any, index: number) => (
                                   <li key={index}>
-                                    {getMaterialName(item.materialId)} - {item.quantity} kg @ ₹{item.price}/kg
+                                    {item.scrap_materials?.name || 'Unknown'} - {item.quantity} kg @ ₹{item.unit_price}/kg
                                   </li>
                                 ))}
                               </ul>
                             </div>
                             <p className="text-sm">
-                              <strong>Payment:</strong> {order.paymentMethod}
+                              <strong>Payment:</strong> {order.payment_method.replace('_', ' ').toUpperCase()}
                             </p>
                           </div>
                           <div className="text-right">
                             <p className="text-2xl font-bold text-primary">
-                              ₹{order.totalAmount.toFixed(2)}
+                              ₹{parseFloat(order.total_amount).toFixed(2)}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(order.createdAt).toLocaleDateString()}
+                              {new Date(order.created_at).toLocaleDateString()}
                             </p>
                           </div>
                         </div>

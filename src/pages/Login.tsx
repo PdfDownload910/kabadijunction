@@ -5,101 +5,116 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
+    fullName: "",
   });
 
   useEffect(() => {
-    // Check if user is already logged in
-    const loggedInUser = JSON.parse(localStorage.getItem("kabadiJunctionUser") || "null");
-    if (loggedInUser) {
-      navigate("/profile");
-    }
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          navigate("/profile");
+        }
+      }
+    );
 
-    // Create demo user if none exists
-    const users = JSON.parse(localStorage.getItem("kabadiJunctionUsers") || "[]");
-    if (users.length === 0) {
-      const demoUser = {
-        id: "demo-user",
-        email: "user@kabadijunction.com",
-        password: "password123",
-        createdAt: new Date().toISOString(),
-      };
-      localStorage.setItem("kabadiJunctionUsers", JSON.stringify([demoUser]));
-    }
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        navigate("/profile");
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    if (isLogin) {
-      // Login logic
-      const users = JSON.parse(localStorage.getItem("kabadiJunctionUsers") || "[]");
-      const user = users.find((u: any) => 
-        u.email.toLowerCase() === formData.email.toLowerCase() && 
-        u.password === formData.password
-      );
-
-      if (user) {
-        localStorage.setItem("kabadiJunctionUser", JSON.stringify(user));
-        toast({
-          title: "Welcome back!",
-          description: "You have been successfully logged in.",
+    try {
+      if (isLogin) {
+        // Login logic
+        const { error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
         });
-        navigate("/profile");
+
+        if (error) {
+          toast({
+            title: "Login failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Welcome back!",
+            description: "You have been successfully logged in.",
+          });
+        }
       } else {
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password.",
-          variant: "destructive",
+        // Register logic
+        if (formData.password !== formData.confirmPassword) {
+          toast({
+            title: "Error",
+            description: "Passwords do not match.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const redirectUrl = `${window.location.origin}/`;
+        
+        const { error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            emailRedirectTo: redirectUrl,
+            data: {
+              full_name: formData.fullName,
+            }
+          }
         });
+
+        if (error) {
+          toast({
+            title: "Registration failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Account created!",
+            description: "Please check your email to verify your account.",
+          });
+        }
       }
-    } else {
-      // Register logic
-      if (formData.password !== formData.confirmPassword) {
-        toast({
-          title: "Error",
-          description: "Passwords do not match.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const users = JSON.parse(localStorage.getItem("kabadiJunctionUsers") || "[]");
-      const existingUser = users.find((u: any) => u.email.toLowerCase() === formData.email.toLowerCase());
-
-      if (existingUser) {
-        toast({
-          title: "Error",
-          description: "An account with this email already exists.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const newUser = {
-        id: Date.now().toString(),
-        email: formData.email,
-        password: formData.password,
-        createdAt: new Date().toISOString(),
-      };
-
-      users.push(newUser);
-      localStorage.setItem("kabadiJunctionUsers", JSON.stringify(users));
-      localStorage.setItem("kabadiJunctionUser", JSON.stringify(newUser));
-
+    } catch (error) {
       toast({
-        title: "Account created!",
-        description: "Your account has been created successfully.",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
-      navigate("/profile");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -114,6 +129,19 @@ const Login = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <div>
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                    required
+                  />
+                </div>
+              )}
+              
               <div>
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -149,8 +177,8 @@ const Login = () => {
                 </div>
               )}
 
-              <Button type="submit" variant="hero" className="w-full">
-                {isLogin ? "Login" : "Create Account"}
+              <Button type="submit" variant="hero" className="w-full" disabled={loading}>
+                {loading ? "Please wait..." : (isLogin ? "Login" : "Create Account")}
               </Button>
             </form>
 
@@ -167,15 +195,6 @@ const Login = () => {
               </p>
             </div>
 
-            {isLogin && (
-              <div className="mt-4 p-4 bg-primary-light rounded-lg">
-                <p className="text-sm text-center">
-                  <strong>Demo Account:</strong><br />
-                  Email: user@kabadijunction.com<br />
-                  Password: password123
-                </p>
-              </div>
-            )}
 
             <div className="mt-4 text-center">
               <Link to="/" className="text-sm text-primary hover:underline">

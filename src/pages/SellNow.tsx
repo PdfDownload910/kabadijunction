@@ -7,10 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { scrapMaterials } from "@/data/scrapMaterials";
-import { Order, PaymentMethod } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
 
-const paymentMethods: PaymentMethod[] = [
+const paymentMethods = [
   {
     id: "upi",
     name: "UPI Payment",
@@ -25,7 +25,7 @@ const paymentMethods: PaymentMethod[] = [
     requiresDetails: false,
   },
   {
-    id: "bank",
+    id: "bank_transfer",
     name: "Bank Transfer",
     description: "NEFT/IMPS transfer to your account",
     requiresDetails: true,
@@ -38,6 +38,10 @@ const SellNow = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [scrapMaterials, setScrapMaterials] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedMaterials, setSelectedMaterials] = useState<{ materialId: string; quantity: number }[]>([]);
   const [formData, setFormData] = useState({
     customerName: "",
@@ -55,11 +59,51 @@ const SellNow = () => {
   });
 
   useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    // Fetch scrap materials
+    fetchScrapMaterials();
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const materialParam = searchParams.get("material");
     if (materialParam && scrapMaterials.find(m => m.id === materialParam)) {
       setSelectedMaterials([{ materialId: materialParam, quantity: 0 }]);
     }
-  }, [searchParams]);
+  }, [searchParams, scrapMaterials]);
+
+  const fetchScrapMaterials = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('scrap_materials')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      setScrapMaterials(data || []);
+    } catch (error) {
+      console.error('Error fetching scrap materials:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load scrap materials. Please refresh the page.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const addMaterial = () => {
     setSelectedMaterials([...selectedMaterials, { materialId: "", quantity: 0 }]);
@@ -82,79 +126,102 @@ const SellNow = () => {
     }, 0);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    // Validation
-    if (selectedMaterials.length === 0 || selectedMaterials.some(m => !m.materialId || m.quantity <= 0)) {
-      toast({
-        title: "Error",
-        description: "Please select at least one material with valid quantity.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const wardNum = parseInt(formData.ward);
-    if (isNaN(wardNum) || wardNum < 1 || wardNum > 43) {
-      toast({
-        title: "Error",
-        description: "Ward number must be between 1 and 43.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check minimum quantities
-    for (const item of selectedMaterials) {
-      const material = scrapMaterials.find(m => m.id === item.materialId);
-      if (material && item.quantity < material.minQuantity) {
+    try {
+      // Validation
+      if (selectedMaterials.length === 0 || selectedMaterials.some(m => !m.materialId || m.quantity <= 0)) {
         toast({
           title: "Error",
-          description: `${material.name} minimum quantity is ${material.minQuantity} kg.`,
+          description: "Please select at least one material with valid quantity.",
           variant: "destructive",
         });
         return;
       }
-    }
 
-    // Create order
-    const newOrder: Order = {
-      id: Date.now().toString(),
-      customerName: formData.customerName,
-      phone: formData.phone,
-      address: formData.address,
-      landmark: formData.landmark,
-      ward: wardNum,
-      pickupDate: formData.pickupDate,
-      pickupTime: formData.pickupTime,
-      scrapMaterials: selectedMaterials.map(item => {
+      const wardNum = parseInt(formData.ward);
+      if (isNaN(wardNum) || wardNum < 1 || wardNum > 43) {
+        toast({
+          title: "Error",
+          description: "Ward number must be between 1 and 43.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check minimum quantities
+      for (const item of selectedMaterials) {
+        const material = scrapMaterials.find(m => m.id === item.materialId);
+        if (material && item.quantity < material.min_quantity) {
+          toast({
+            title: "Error",
+            description: `${material.name} minimum quantity is ${material.min_quantity} kg.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      const totalAmount = calculateTotal();
+      
+      // Create order in database
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user?.id,
+          customer_name: formData.customerName,
+          phone: formData.phone,
+          address: formData.address,
+          landmark: formData.landmark,
+          ward: wardNum,
+          pickup_date: formData.pickupDate,
+          pickup_time: formData.pickupTime,
+          total_amount: totalAmount,
+          payment_method: formData.paymentMethod,
+          payment_details: formData.paymentDetails,
+          status: 'pending',
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = selectedMaterials.map(item => {
         const material = scrapMaterials.find(m => m.id === item.materialId)!;
         return {
-          materialId: item.materialId,
+          order_id: orderData.id,
+          scrap_material_id: item.materialId,
           quantity: item.quantity,
-          price: material.price,
+          unit_price: material.price,
+          total_price: material.price * item.quantity,
         };
-      }),
-      totalAmount: calculateTotal(),
-      paymentMethod: formData.paymentMethod,
-      paymentDetails: formData.paymentDetails,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      });
 
-    // Save to localStorage (in real app, this would be sent to backend)
-    const existingOrders = JSON.parse(localStorage.getItem("kabadiJunctionOrders") || "[]");
-    existingOrders.push(newOrder);
-    localStorage.setItem("kabadiJunctionOrders", JSON.stringify(existingOrders));
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
 
-    toast({
-      title: "Success!",
-      description: "Your pickup has been scheduled successfully. We will contact you soon.",
-    });
+      if (itemsError) throw itemsError;
 
-    navigate("/profile");
+      toast({
+        title: "Success!",
+        description: "Your pickup has been scheduled successfully. We will contact you soon.",
+      });
+
+      navigate("/profile");
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const selectedPaymentMethod = paymentMethods.find(pm => pm.id === formData.paymentMethod);
@@ -398,8 +465,8 @@ const SellNow = () => {
               </Card>
             )}
 
-            <Button type="submit" variant="hero" size="lg" className="w-full">
-              Schedule Pickup
+            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
+              {loading ? "Processing..." : "Schedule Pickup"}
             </Button>
           </form>
         </div>
