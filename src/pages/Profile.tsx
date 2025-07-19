@@ -110,6 +110,36 @@ const Profile = () => {
     navigate("/login");
   };
 
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // Update local state
+      setOrders(orders.map(order => 
+        order.id === orderId 
+          ? { ...order, status: newStatus, updated_at: new Date().toISOString() }
+          : order
+      ));
+
+      toast({
+        title: "Order Updated",
+        description: `Order status changed to ${newStatus}`,
+      });
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update order status",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending": return "bg-yellow-100 text-yellow-800";
@@ -215,13 +245,53 @@ const Profile = () => {
                               <strong>Payment:</strong> {order.payment_method.replace('_', ' ').toUpperCase()}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right space-y-2">
                             <p className="text-2xl font-bold text-primary">
                               ₹{parseFloat(order.total_amount).toFixed(2)}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {new Date(order.created_at).toLocaleDateString()}
                             </p>
+                            {/* Order Status Management */}
+                            <div className="flex flex-col gap-1">
+                              {order.status === 'pending' && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => updateOrderStatus(order.id, 'confirmed')}
+                                  className="text-xs"
+                                >
+                                  Confirm Order
+                                </Button>
+                              )}
+                              {order.status === 'confirmed' && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => updateOrderStatus(order.id, 'picked')}
+                                  className="text-xs"
+                                >
+                                  Mark as Picked
+                                </Button>
+                              )}
+                              {order.status === 'picked' && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => updateOrderStatus(order.id, 'completed')}
+                                  className="text-xs bg-green-600 hover:bg-green-700"
+                                >
+                                  Mark as Completed
+                                </Button>
+                              )}
+                              {(order.status === 'pending' || order.status === 'confirmed') && (
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                                  className="text-xs"
+                                >
+                                  Cancel Order
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </CardContent>
