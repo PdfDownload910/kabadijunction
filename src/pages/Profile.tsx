@@ -146,6 +146,7 @@ const Profile = () => {
       case "confirmed": return "bg-blue-100 text-blue-800";
       case "picked": return "bg-purple-100 text-purple-800";
       case "completed": return "bg-green-100 text-green-800";
+      case "success": return "bg-emerald-100 text-emerald-800";
       case "cancelled": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
@@ -255,13 +256,22 @@ const Profile = () => {
                             {/* Order Status Management */}
                             <div className="flex flex-col gap-1">
                               {order.status === 'pending' && (
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => updateOrderStatus(order.id, 'confirmed')}
-                                  className="text-xs"
-                                >
-                                  Confirm Order
-                                </Button>
+                                <>
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => updateOrderStatus(order.id, 'success')}
+                                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  >
+                                    Mark as Success
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => updateOrderStatus(order.id, 'confirmed')}
+                                    className="text-xs"
+                                  >
+                                    Confirm Order
+                                  </Button>
+                                </>
                               )}
                               {order.status === 'confirmed' && (
                                 <Button 
