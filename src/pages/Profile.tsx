@@ -255,42 +255,6 @@ const Profile = () => {
                             </p>
                             {/* Order Status Management */}
                             <div className="flex flex-col gap-1">
-                              {order.status === 'pending' && (
-                                <>
-                                  <Button 
-                                    size="sm" 
-                                    onClick={() => updateOrderStatus(order.id, 'success')}
-                                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                                  >
-                                    Mark as Success
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    onClick={() => updateOrderStatus(order.id, 'confirmed')}
-                                    className="text-xs"
-                                  >
-                                    Confirm Order
-                                  </Button>
-                                </>
-                              )}
-                              {order.status === 'confirmed' && (
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => updateOrderStatus(order.id, 'picked')}
-                                  className="text-xs"
-                                >
-                                  Mark as Picked
-                                </Button>
-                              )}
-                              {order.status === 'picked' && (
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => updateOrderStatus(order.id, 'completed')}
-                                  className="text-xs bg-green-600 hover:bg-green-700"
-                                >
-                                  Mark as Completed
-                                </Button>
-                              )}
                               {(order.status === 'pending' || order.status === 'confirmed') && (
                                 <Button 
                                   size="sm" 
