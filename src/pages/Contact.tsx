@@ -6,9 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -17,22 +19,48 @@ const Contact = () => {
     message: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    // In a real app, this would send the message to a backend
-    toast({
-      title: "Message sent!",
-      description: "Thank you for contacting us. We'll get back to you soon.",
-    });
-    
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      message: "",
-    });
+    try {
+      const { error } = await supabase.functions.invoke('contact-message', {
+        body: {
+          name: formData.name,
+          email: formData.email,
+          message: formData.message
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Message sent!",
+          description: "Thank you for your message. We'll get back to you soon.",
+        });
+        
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          subject: "",
+          message: "",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const contactInfo = [
@@ -199,9 +227,9 @@ const Contact = () => {
                     />
                   </div>
 
-                  <Button type="submit" variant="hero" className="w-full">
-                    Send Message
-                  </Button>
+              <Button type="submit" variant="hero" className="w-full" disabled={loading}>
+                {loading ? "Sending..." : "Send Message"}
+              </Button>
                 </form>
               </CardContent>
             </Card>

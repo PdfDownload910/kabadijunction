@@ -55,7 +55,7 @@ const Login = () => {
       if (showForgotPassword) {
         // Forgot password logic
         const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-          redirectTo: `${window.location.origin}/login`,
+          redirectTo: `${window.location.origin}/reset-password`,
         });
 
         if (error) {
@@ -101,7 +101,7 @@ const Login = () => {
           return;
         }
 
-        const redirectUrl = `${window.location.origin}/`;
+        const redirectUrl = `${window.location.origin}/reset-password`;
         
         const { error } = await supabase.auth.signUp({
           email: formData.email,
