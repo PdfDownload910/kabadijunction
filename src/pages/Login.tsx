@@ -15,6 +15,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -51,7 +52,26 @@ const Login = () => {
     setLoading(true);
     
     try {
-      if (isLogin) {
+      if (showForgotPassword) {
+        // Forgot password logic
+        const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+          redirectTo: `${window.location.origin}/login`,
+        });
+
+        if (error) {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Reset email sent!",
+            description: "Please check your email for password reset instructions.",
+          });
+          setShowForgotPassword(false);
+        }
+      } else if (isLogin) {
         // Login logic
         const { error } = await supabase.auth.signInWithPassword({
           email: formData.email,
@@ -124,12 +144,12 @@ const Login = () => {
         <Card className="animate-scale-in">
           <CardHeader>
             <CardTitle className="text-2xl text-center">
-              {isLogin ? "Welcome Back" : "Create Account"}
+              {showForgotPassword ? "Reset Password" : (isLogin ? "Welcome Back" : "Create Account")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
+              {!isLogin && !showForgotPassword && (
                 <div>
                   <Label htmlFor="fullName">Full Name</Label>
                   <Input
@@ -153,18 +173,20 @@ const Login = () => {
                 />
               </div>
               
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  required
-                />
-              </div>
+              {!showForgotPassword && (
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    required
+                  />
+                </div>
+              )}
 
-              {!isLogin && (
+              {!isLogin && !showForgotPassword && (
                 <div>
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <Input
@@ -178,22 +200,51 @@ const Login = () => {
               )}
 
               <Button type="submit" variant="hero" className="w-full" disabled={loading}>
-                {loading ? "Please wait..." : (isLogin ? "Login" : "Create Account")}
+                {loading ? "Please wait..." : (showForgotPassword ? "Send Reset Email" : (isLogin ? "Login" : "Create Account"))}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+            {isLogin && !showForgotPassword && (
+              <div className="mt-4 text-center">
                 <Button
                   variant="link"
-                  onClick={() => setIsLogin(!isLogin)}
-                  className="p-0 h-auto font-semibold"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="p-0 h-auto text-sm text-primary hover:underline"
                 >
-                  {isLogin ? "Sign up" : "Login"}
+                  Forgot your password?
                 </Button>
-              </p>
-            </div>
+              </div>
+            )}
+
+            {!showForgotPassword && (
+              <div className="mt-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+                  <Button
+                    variant="link"
+                    onClick={() => setIsLogin(!isLogin)}
+                    className="p-0 h-auto font-semibold"
+                  >
+                    {isLogin ? "Sign up" : "Login"}
+                  </Button>
+                </p>
+              </div>
+            )}
+
+            {showForgotPassword && (
+              <div className="mt-6 text-center">
+                <Button
+                  variant="link"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setFormData({...formData, email: "", password: ""});
+                  }}
+                  className="p-0 h-auto text-sm text-primary hover:underline"
+                >
+                  ← Back to Login
+                </Button>
+              </div>
+            )}
 
 
             <div className="mt-4 text-center">

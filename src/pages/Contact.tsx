@@ -39,7 +39,7 @@ const Contact = () => {
     {
       icon: Phone,
       title: "Phone",
-      details: ["+91 9876543210", "+91 9876543211"],
+      details: ["+91 9102646660", "+91 6203879860"],
     },
     {
       icon: Mail,
@@ -49,7 +49,7 @@ const Contact = () => {
     {
       icon: MapPin,
       title: "Address",
-      details: ["123 Green Street", "Eco City, EC 12345"],
+      details: ["Chhoti Keshopur", "Jamalpur"],
     },
     {
       icon: Clock,
