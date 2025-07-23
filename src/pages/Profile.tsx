@@ -3,9 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
+import { Phone, Mail, MapPin, Clock } from "lucide-react";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -16,6 +20,14 @@ const Profile = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [scrapMaterials, setScrapMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    message: "",
+  });
 
   useEffect(() => {
     // Set up auth state listener
@@ -157,6 +169,73 @@ const Profile = () => {
     return material ? material.name : materialId;
   };
 
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactLoading(true);
+    
+    try {
+      const { error } = await supabase.functions.invoke('contact-message', {
+        body: {
+          name: contactForm.name,
+          email: contactForm.email,
+          message: contactForm.message
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Message sent!",
+          description: "Thank you for your message. We'll get back to you soon.",
+        });
+        
+        setContactForm({
+          name: "",
+          email: "",
+          phone: "",
+          subject: "",
+          message: "",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
+  const contactInfo = [
+    {
+      icon: Phone,
+      title: "Phone",
+      details: ["+91 9102646660", "+91 6203879860"],
+    },
+    {
+      icon: Mail,
+      title: "Email",
+      details: ["info@kabadijunction.com", "support@kabadijunction.com"],
+    },
+    {
+      icon: MapPin,
+      title: "Address",
+      details: ["Chhoti Keshopur", "Jamalpur"],
+    },
+    {
+      icon: Clock,
+      title: "Business Hours",
+      details: ["Mon - Sat: 9:00 AM - 6:00 PM", "Sunday: 10:00 AM - 4:00 PM"],
+    },
+  ];
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-secondary flex items-center justify-center">
@@ -200,10 +279,191 @@ const Profile = () => {
             </CardContent>
           </Card>
 
-          {/* Orders Section */}
+          {/* Your Orders Section */}
           <Card>
             <CardHeader>
               <CardTitle>Your Orders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {orders.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">You haven't placed any orders yet.</p>
+                  <Button onClick={() => navigate("/sell-now")}>
+                    Schedule Your First Pickup
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {orders.map((order) => (
+                    <Card key={order.id} className="border-l-4 border-l-primary">
+                      <CardContent className="pt-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-semibold">Order #{order.id.slice(0, 8)}</span>
+                              <Badge className={getStatusColor(order.status)}>
+                                {order.status.toUpperCase()}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Pickup Date: {order.pickup_date} at {order.pickup_time}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Address: {order.address}, {order.landmark}
+                            </p>
+                            <div className="text-sm">
+                              <strong>Materials:</strong>
+                              <ul className="ml-4 mt-1">
+                                {order.order_items?.map((item: any, index: number) => (
+                                  <li key={index}>
+                                    {item.scrap_materials?.name || 'Unknown'} - {item.quantity} kg @ ₹{item.unit_price}/kg
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            <p className="text-sm">
+                              <strong>Payment:</strong> {order.payment_method.replace('_', ' ').toUpperCase()}
+                            </p>
+                          </div>
+                          <div className="text-right space-y-2">
+                            <p className="text-2xl font-bold text-primary">
+                              ₹{parseFloat(order.total_amount).toFixed(2)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(order.created_at).toLocaleDateString()}
+                            </p>
+                            {/* Order Status Management */}
+                            <div className="flex flex-col gap-1">
+                              {(order.status === 'pending' || order.status === 'confirmed') && (
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                                  className="text-xs"
+                                >
+                                  Cancel Order
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Contact Us Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Contact Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact Us</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-6">
+                  Have questions about our scrap collection service? We're here to help!
+                  Reach out to us through any of the following channels.
+                </p>
+                
+                <div className="space-y-4">
+                  {contactInfo.map((info, index) => {
+                    const IconComponent = info.icon;
+                    return (
+                      <div key={index} className="flex items-start space-x-3">
+                        <div className="flex-shrink-0">
+                          <IconComponent className="h-5 w-5 text-primary mt-1" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{info.title}</h3>
+                          {info.details.map((detail, detailIndex) => (
+                            <p key={detailIndex} className="text-sm text-muted-foreground">
+                              {detail}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Send us a Message</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleContactSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Name *</Label>
+                      <Input
+                        id="name"
+                        value={contactForm.name}
+                        onChange={(e) => setContactForm({...contactForm, name: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={contactForm.email}
+                        onChange={(e) => setContactForm({...contactForm, email: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={contactForm.phone}
+                        onChange={(e) => setContactForm({...contactForm, phone: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="subject">Subject *</Label>
+                      <Input
+                        id="subject"
+                        value={contactForm.subject}
+                        onChange={(e) => setContactForm({...contactForm, subject: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="message">Message *</Label>
+                    <Textarea
+                      id="message"
+                      rows={6}
+                      value={contactForm.message}
+                      onChange={(e) => setContactForm({...contactForm, message: e.target.value})}
+                      required
+                    />
+                  </div>
+
+                  <Button type="submit" variant="hero" className="w-full" disabled={contactLoading}>
+                    {contactLoading ? "Sending..." : "Send Message"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* My Orders Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>My Orders</CardTitle>
             </CardHeader>
             <CardContent>
               {orders.length === 0 ? (
