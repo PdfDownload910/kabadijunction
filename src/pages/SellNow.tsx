@@ -211,7 +211,7 @@ const SellNow = () => {
         description: "Your pickup has been scheduled successfully. We will contact you soon.",
       });
 
-      navigate("/profile");
+      navigate("/");
     } catch (error) {
       console.error('Error creating order:', error);
       toast({

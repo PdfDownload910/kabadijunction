@@ -117,6 +117,39 @@ const Orders = () => {
     return material ? material.name : materialId;
   };
 
+  const cancelOrder = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', orderId)
+        .eq('user_id', user?.id); // Extra security check
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Order cancelled successfully.",
+      });
+
+      // Refresh orders
+      if (user?.id) {
+        fetchAllOrders(user.id);
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel order. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const canCancelOrder = (status: string) => {
+    return status === 'pending' || status === 'confirmed';
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-secondary flex items-center justify-center">
@@ -215,6 +248,16 @@ const Orders = () => {
                             <p className="text-sm text-muted-foreground">
                               {new Date(order.created_at).toLocaleDateString()}
                             </p>
+                            {canCancelOrder(order.status) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => cancelOrder(order.id)}
+                                className="mt-2"
+                              >
+                                Cancel Order
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </CardContent>
