@@ -48,8 +48,10 @@ const Orders = () => {
   }, [navigate]);
 
   const fetchAllOrders = async () => {
+    if (!user?.id) return;
+    
     try {
-      // Fetch all orders with order items - remove user filter to see all orders
+      // Fetch only the current user's orders
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
@@ -59,13 +61,14 @@ const Orders = () => {
             scrap_materials (*)
           )
         `)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (ordersError) {
         console.error('Error fetching orders:', ordersError);
         toast({
           title: "Error",
-          description: "Failed to fetch orders. You may not have permission to view all orders.",
+          description: "Failed to fetch your orders.",
           variant: "destructive",
         });
       } else {
@@ -96,35 +99,6 @@ const Orders = () => {
     }
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', orderId);
-
-      if (error) throw error;
-
-      // Update local state
-      setOrders(orders.map(order => 
-        order.id === orderId 
-          ? { ...order, status: newStatus, updated_at: new Date().toISOString() }
-          : order
-      ));
-
-      toast({
-        title: "Order Updated",
-        description: `Order status changed to ${newStatus}`,
-      });
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update order status",
-        variant: "destructive",
-      });
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -165,7 +139,7 @@ const Orders = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>All Customer Orders</span>
+                <span>My Orders</span>
                 <div className="space-x-2">
                   <Button variant="outline" onClick={() => navigate("/")}>
                     Back to Home
@@ -175,7 +149,7 @@ const Orders = () => {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                View and manage all customer orders and their status.
+                View your orders and their current status.
               </p>
             </CardContent>
           </Card>
@@ -183,12 +157,12 @@ const Orders = () => {
           {/* Orders Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Customer Orders ({orders.length})</CardTitle>
+              <CardTitle>My Orders ({orders.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {orders.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground mb-4">No orders found.</p>
+                  <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">You haven't placed any orders yet.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -241,59 +215,6 @@ const Orders = () => {
                             <p className="text-sm text-muted-foreground">
                               {new Date(order.created_at).toLocaleDateString()}
                             </p>
-                            {/* Order Status Management */}
-                            <div className="flex flex-col gap-1">
-                              {order.status === 'pending' && (
-                                <>
-                                  <Button 
-                                    size="sm" 
-                                    variant="default"
-                                    onClick={() => updateOrderStatus(order.id, 'confirmed')}
-                                    className="text-xs"
-                                  >
-                                    Confirm Order
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="destructive"
-                                    onClick={() => updateOrderStatus(order.id, 'cancelled')}
-                                    className="text-xs"
-                                  >
-                                    Cancel Order
-                                  </Button>
-                                </>
-                              )}
-                              {order.status === 'confirmed' && (
-                                <>
-                                  <Button 
-                                    size="sm" 
-                                    variant="default"
-                                    onClick={() => updateOrderStatus(order.id, 'picked')}
-                                    className="text-xs"
-                                  >
-                                    Mark as Picked
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="destructive"
-                                    onClick={() => updateOrderStatus(order.id, 'cancelled')}
-                                    className="text-xs"
-                                  >
-                                    Cancel Order
-                                  </Button>
-                                </>
-                              )}
-                              {order.status === 'picked' && (
-                                <Button 
-                                  size="sm" 
-                                  variant="default"
-                                  onClick={() => updateOrderStatus(order.id, 'completed')}
-                                  className="text-xs"
-                                >
-                                  Mark as Completed
-                                </Button>
-                              )}
-                            </div>
                           </div>
                         </div>
                       </CardContent>
