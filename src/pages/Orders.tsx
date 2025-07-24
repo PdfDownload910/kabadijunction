@@ -25,7 +25,7 @@ const Orders = () => {
         if (!session?.user) {
           navigate("/login");
         } else {
-          fetchAllOrders();
+          fetchAllOrders(session.user.id);
         }
       }
     );
@@ -37,7 +37,7 @@ const Orders = () => {
       if (!session?.user) {
         navigate("/login");
       } else {
-        fetchAllOrders();
+        fetchAllOrders(session.user.id);
       }
     });
 
@@ -47,8 +47,8 @@ const Orders = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const fetchAllOrders = async () => {
-    if (!user?.id) return;
+  const fetchAllOrders = async (userId: string) => {
+    if (!userId) return;
     
     try {
       // Fetch only the current user's orders
@@ -61,7 +61,7 @@ const Orders = () => {
             scrap_materials (*)
           )
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (ordersError) {
