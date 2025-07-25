@@ -7,8 +7,8 @@
 @layer base {
   :root {
     /* Base colors */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 217 32% 17%;
+    --foreground: 210 40% 98%;
 
     /* Card colors */
     --card: 0 0% 100%;
