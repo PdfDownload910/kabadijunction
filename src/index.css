@@ -11,12 +11,12 @@
     --foreground: 210 40% 98%;
 
     /* Card colors */
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 217 32% 20%;
+    --card-foreground: 210 40% 98%;
 
     /* Popover colors */
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 217 32% 20%;
+    --popover-foreground: 210 40% 98%;
 
     /* Primary green theme for KabadiJunction */
     --primary: 142 76% 36%;
@@ -25,16 +25,16 @@
     --primary-light: 142 76% 90%;
 
     /* Secondary colors */
-    --secondary: 142 20% 96%;
-    --secondary-foreground: 142 76% 36%;
+    --secondary: 217 32% 25%;
+    --secondary-foreground: 210 40% 98%;
 
     /* Muted colors */
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 217 32% 25%;
+    --muted-foreground: 210 40% 80%;
 
     /* Accent colors */
-    --accent: 142 50% 94%;
-    --accent-foreground: 142 76% 36%;
+    --accent: 217 32% 25%;
+    --accent-foreground: 210 40% 98%;
 
     /* Status colors */
     --destructive: 0 84.2% 60.2%;
@@ -45,8 +45,8 @@
     --warning-foreground: 0 0% 98%;
 
     /* Border and input */
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 217 32% 30%;
+    --input: 217 32% 25%;
     --ring: 142 76% 36%;
 
     /* Gradients for modern appeal */
