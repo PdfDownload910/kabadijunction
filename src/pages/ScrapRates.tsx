@@ -68,7 +68,7 @@ const ScrapRates = () => {
     });
 
     return sorted;
-  }, [searchTerm, categoryFilter, sortBy]);
+  }, [searchTerm, categoryFilter, sortBy, scrapMaterials]);
 
   const handleScrapCardClick = (materialId: string) => {
     navigate(`/sell-now?material=${materialId}`);
