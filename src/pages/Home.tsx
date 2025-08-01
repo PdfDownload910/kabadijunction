@@ -1,13 +1,31 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import HeroSection from "@/components/HeroSection";
 import ScrapCard from "@/components/ScrapCard";
-import { scrapMaterials } from "@/data/scrapMaterials";
+import { supabase } from "@/integrations/supabase/client";
 import featuresImage from "@/assets/features-image.jpg";
 
 const Home = () => {
   const navigate = useNavigate();
+  const [scrapMaterials, setScrapMaterials] = useState<any[]>([]);
 
-  const mainCategories = scrapMaterials.slice(0, 4); // Show first 4 categories
+  useEffect(() => {
+    const fetchScrapMaterials = async () => {
+      const { data, error } = await supabase
+        .from('scrap_materials')
+        .select('*')
+        .eq('is_active', true)
+        .limit(4);
+      
+      if (data && !error) {
+        setScrapMaterials(data);
+      }
+    };
+
+    fetchScrapMaterials();
+  }, []);
+
+  const mainCategories = scrapMaterials; // Show first 4 categories from database
 
   const handleScrapCardClick = (materialId: string) => {
     navigate(`/sell-now?material=${materialId}`);
@@ -57,7 +75,7 @@ const Home = () => {
                 <ScrapCard
                   name={material.name}
                   price={`₹${material.price} / ${material.unit}`}
-                  image={material.image}
+                  image={material.image_url || "/placeholder.svg"}
                   category={material.category}
                   description={material.description}
                   onClick={() => handleScrapCardClick(material.id)}
