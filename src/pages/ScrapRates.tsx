@@ -1,15 +1,40 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ScrapCard from "@/components/ScrapCard";
-import { scrapMaterials, scrapCategories } from "@/data/scrapMaterials";
+import { supabase } from "@/integrations/supabase/client";
 
 const ScrapRates = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("default");
+  const [scrapMaterials, setScrapMaterials] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchScrapMaterials = async () => {
+      const { data, error } = await supabase
+        .from('scrap_materials')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (data && !error) {
+        setScrapMaterials(data);
+        
+        // Extract unique categories from materials
+        const uniqueCategories = [...new Set(data.map(material => material.category))];
+        const categoryOptions = [
+          { id: 'all', name: 'All Categories' },
+          ...uniqueCategories.map(cat => ({ id: cat, name: cat.charAt(0).toUpperCase() + cat.slice(1) }))
+        ];
+        setCategories(categoryOptions);
+      }
+    };
+
+    fetchScrapMaterials();
+  }, []);
 
   const filteredAndSortedMaterials = useMemo(() => {
     let filtered = scrapMaterials;
@@ -71,7 +96,7 @@ const ScrapRates = () => {
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
               <SelectContent>
-                {scrapCategories.map((category) => (
+                {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
                   </SelectItem>
@@ -104,7 +129,7 @@ const ScrapRates = () => {
                 <ScrapCard
                   name={material.name}
                   price={`₹${material.price} / ${material.unit}`}
-                  image={material.image}
+                  image={material.image_url || "/placeholder.svg"}
                   category={material.category}
                   description={material.description}
                   onClick={() => handleScrapCardClick(material.id)}
