@@ -76,50 +76,58 @@ const ScrapRates = () => {
 
   return (
     <div className="min-h-screen bg-gradient-secondary">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Mobile-optimized container with safe area padding */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         <div className="animate-fade-in">
-          <h1 className="text-3xl font-bold text-primary mb-8 text-center">
+          {/* Mobile-optimized heading */}
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-6 sm:mb-8 text-center px-2">
             Scrap Materials & Rates
           </h1>
 
-          {/* Search and Filter Controls */}
-          <div className="max-w-4xl mx-auto mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input
-              placeholder="Search scrap materials..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
-            />
+          {/* Mobile-first search and filter controls */}
+          <div className="mb-6 sm:mb-8 space-y-3 sm:space-y-0 sm:max-w-4xl sm:mx-auto sm:grid sm:grid-cols-3 sm:gap-4">
+            {/* Search input - full width on mobile */}
+            <div className="w-full">
+              <Input
+                placeholder="Search materials..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-12 sm:h-10 text-base sm:text-sm"
+              />
+            </div>
             
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Filter controls - stacked on mobile, side by side on tablet+ */}
+            <div className="grid grid-cols-2 gap-3 sm:contents">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="h-12 sm:h-10 text-base sm:text-sm">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id} className="text-base sm:text-sm">
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Sort by Default</SelectItem>
-                <SelectItem value="name-asc">Name: A to Z</SelectItem>
-                <SelectItem value="name-desc">Name: Z to A</SelectItem>
-                <SelectItem value="rate-asc">Rate: Low to High</SelectItem>
-                <SelectItem value="rate-desc">Rate: High to Low</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="h-12 sm:h-10 text-base sm:text-sm">
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default" className="text-base sm:text-sm">Default</SelectItem>
+                  <SelectItem value="name-asc" className="text-base sm:text-sm">A to Z</SelectItem>
+                  <SelectItem value="name-desc" className="text-base sm:text-sm">Z to A</SelectItem>
+                  <SelectItem value="rate-asc" className="text-base sm:text-sm">Price: Low</SelectItem>
+                  <SelectItem value="rate-desc" className="text-base sm:text-sm">Price: High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* Scrap Materials Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {/* Mobile-optimized materials grid */}
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {filteredAndSortedMaterials.map((material, index) => (
               <div
                 key={material.id}
@@ -138,11 +146,17 @@ const ScrapRates = () => {
             ))}
           </div>
 
+          {/* Mobile-optimized empty state */}
           {filteredAndSortedMaterials.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">
-                No scrap materials found matching your criteria.
-              </p>
+            <div className="text-center py-8 sm:py-12 px-4">
+              <div className="max-w-md mx-auto">
+                <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
+                  No scrap materials found matching your criteria.
+                </p>
+                <p className="text-muted-foreground text-sm mt-2">
+                  Try adjusting your search or filter settings.
+                </p>
+              </div>
             </div>
           )}
         </div>
