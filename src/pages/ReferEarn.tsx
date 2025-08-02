@@ -284,7 +284,7 @@ const ReferEarn = () => {
             <p>• Referral reward is credited after the referred user completes their first successful sale.</p>
             <p>• Self-referrals and fake accounts are strictly prohibited.</p>
             <p>• KabadiJunction reserves the right to modify or terminate this program at any time.</p>
-            <p>• Earnings will be processed within 7-10 business days after successful referral completion.</p>
+            <p>• Earnings will be processed within 1-2 business days after successful referral completion.</p>
           </CardContent>
         </Card>
       </div>

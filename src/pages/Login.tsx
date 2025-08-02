@@ -112,14 +112,14 @@ const Login = () => {
             referrerUserId = 'admin';
           } else {
             // Check if referral code exists
-            const { data: referralCodeData } = await supabase
+            const { data: referralCodeData, error: referralError } = await supabase
               .from('referral_codes')
               .select('user_id')
               .eq('code', formData.referralCode.trim())
               .eq('is_active', true)
               .single();
 
-            if (!referralCodeData) {
+            if (referralError || !referralCodeData) {
               toast({
                 title: "Invalid referral code",
                 description: "The referral code you entered is not valid.",
