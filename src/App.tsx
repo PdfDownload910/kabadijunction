@@ -11,6 +11,7 @@ import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import Orders from "./pages/Orders";
+import ReferEarn from "./pages/ReferEarn";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/" element={<Home />} />
             <Route path="/scrap-rates" element={<ScrapRates />} />
             <Route path="/sell-now" element={<SellNow />} />
+            <Route path="/refer-earn" element={<ReferEarn />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/profile" element={<Profile />} />

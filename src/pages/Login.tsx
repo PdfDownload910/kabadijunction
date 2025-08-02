@@ -21,6 +21,7 @@ const Login = () => {
     password: "",
     confirmPassword: "",
     fullName: "",
+    referralCode: "",
   });
 
   useEffect(() => {
@@ -103,13 +104,41 @@ const Login = () => {
 
         const redirectUrl = `${window.location.origin}/reset-password`;
         
-        const { error } = await supabase.auth.signUp({
+        // Validate referral code if provided
+        let referrerUserId = null;
+        if (formData.referralCode.trim()) {
+          if (formData.referralCode === 'HARSH21') {
+            // Special admin referral code - no specific referrer
+            referrerUserId = 'admin';
+          } else {
+            // Check if referral code exists
+            const { data: referralCodeData } = await supabase
+              .from('referral_codes')
+              .select('user_id')
+              .eq('code', formData.referralCode.trim())
+              .eq('is_active', true)
+              .single();
+
+            if (!referralCodeData) {
+              toast({
+                title: "Invalid referral code",
+                description: "The referral code you entered is not valid.",
+                variant: "destructive",
+              });
+              return;
+            }
+            referrerUserId = referralCodeData.user_id;
+          }
+        }
+
+        const { data: authData, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
             emailRedirectTo: redirectUrl,
             data: {
               full_name: formData.fullName,
+              referral_code_used: formData.referralCode.trim() || null,
             }
           }
         });
@@ -121,9 +150,30 @@ const Login = () => {
             variant: "destructive",
           });
         } else {
+          // Store referral relationship if applicable
+          if (referrerUserId && authData.user && formData.referralCode.trim()) {
+            setTimeout(() => {
+              supabase
+                .from('referrals')
+                .insert({
+                  referrer_user_id: referrerUserId === 'admin' ? null : referrerUserId,
+                  referred_user_id: authData.user!.id,
+                  referral_code: formData.referralCode.trim(),
+                  status: 'pending'
+                })
+                .then(({ error: referralError }) => {
+                  if (referralError) {
+                    console.error('Error creating referral:', referralError);
+                  }
+                });
+            }, 1000);
+          }
+
           toast({
             title: "Account created!",
-            description: "Please check your email to verify your account.",
+            description: formData.referralCode ? 
+              "Please check your email to verify your account. Your referral has been recorded!" :
+              "Please check your email to verify your account.",
           });
         }
       }
@@ -196,6 +246,22 @@ const Login = () => {
                     onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                     required
                   />
+                </div>
+              )}
+
+              {!isLogin && !showForgotPassword && (
+                <div>
+                  <Label htmlFor="referralCode">Referral Code (Optional)</Label>
+                  <Input
+                    id="referralCode"
+                    type="text"
+                    placeholder="Enter HARSH21 or a friend's code"
+                    value={formData.referralCode}
+                    onChange={(e) => setFormData({...formData, referralCode: e.target.value.toUpperCase()})}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Have a referral code? Enter it to give your friend ₹21 when you sell 20kg of scrap!
+                  </p>
                 </div>
               )}
 
