@@ -107,11 +107,15 @@ const Login = () => {
         // Validate referral code if provided
         let referrerUserId = null;
         if (formData.referralCode.trim()) {
+          console.log('Validating referral code:', formData.referralCode.trim());
+          
           if (formData.referralCode === 'HARSH21') {
             // Special admin referral code - no specific referrer
             referrerUserId = 'admin';
+            console.log('Using admin referral code');
           } else {
             // Check if referral code exists
+            console.log('Checking referral code in database...');
             const { data: referralCodeData, error: referralError } = await supabase
               .from('referral_codes')
               .select('user_id')
@@ -119,7 +123,10 @@ const Login = () => {
               .eq('is_active', true)
               .single();
 
+            console.log('Referral code query result:', { referralCodeData, referralError });
+
             if (referralError || !referralCodeData) {
+              console.log('Referral code validation failed:', referralError);
               toast({
                 title: "Invalid referral code",
                 description: "The referral code you entered is not valid.",
@@ -128,6 +135,7 @@ const Login = () => {
               return;
             }
             referrerUserId = referralCodeData.user_id;
+            console.log('Referral code validated, referrer user ID:', referrerUserId);
           }
         }
 
